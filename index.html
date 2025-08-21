@@ -58,51 +58,66 @@
   </div>
 
   <script>
-    const state = { data: [], q: "", showBeta: false, sortKey: "product_name" };
-    const qs = (s)=>document.querySelector(s);
-    const rowsEl = qs("#rows"), qEl = qs("#q"), betaEl = qs("#showBeta"), sortEl = qs("#sortKey"), statusEl = qs("#status");
+  const state = { data: [], q: "", showBeta: false, sortKey: "product_name" };
+  const qs = (s)=>document.querySelector(s);
+  const rowsEl = qs("#rows"), qEl = qs("#q"), betaEl = qs("#showBeta"), sortEl = qs("#sortKey"), statusEl = qs("#status");
 
-    function render() {
-      const needle = state.q.trim().toLowerCase();
-      let list = state.data
-        .filter(r => state.showBeta ? true : r.channel !== "beta")
-        .filter(r =>
-          (r.product_name||"").toLowerCase().includes(needle) ||
-          (r.product_code||"").toLowerCase().includes(needle) ||
-          (r.hardware_rev||"").toLowerCase().includes(needle)
-        );
+  function render() {
+    const needle = state.q.trim().toLowerCase();
+    let list = state.data
+      .filter(r => state.showBeta ? true : r.channel !== "beta")
+      .filter(r =>
+        (r.product_name||"").toLowerCase().includes(needle) ||
+        (r.product_code||"").toLowerCase().includes(needle) ||
+        (r.hardware_rev||"").toLowerCase().includes(needle)
+      );
 
-      list.sort((a,b)=>{
-        const k = state.sortKey;
-        if (k === "released_at") return new Date(b.released_at) - new Date(a.released_at);
-        if (k === "version") return (b.version||"").localeCompare(a.version||"", undefined, {numeric:true, sensitivity:"base"});
-        return String(a[k]||"").localeCompare(String(b[k]||""));
-      });
+    list.sort((a,b)=>{
+      const k = state.sortKey;
+      if (k === "released_at") return new Date(b.released_at) - new Date(a.released_at);
+      if (k === "version") return (b.version||"").localeCompare(a.version||"", undefined, {numeric:true, sensitivity:"base"});
+      return String(a[k]||"").localeCompare(String(b[k]||""));
+    });
 
-      rowsEl.innerHTML = list.map(r => `
-        <tr>
-          <td>${esc(r.product_name)}</td>
-          <td><code>${esc(r.product_code)}</code>${r.hardware_rev ? " • HW " + esc(r.hardware_rev) : ""}</td>
-          <td><span class="tag ${r.channel==="approved"?"ok":"beta"}">${esc(cap(r.channel))}</span></td>
-          <td><code>${esc(r.version)}</code></td>
-          <td><code>${isoUTC(r.released_at)}</code></td>
-          <td>${esc(r.notes||"")}</td>
-        </tr>
-      `).join("");
-    }
+    rowsEl.innerHTML = list.map(r => `
+      <tr>
+        <td>${esc(r.product_name)}</td>
+        <td><code>${esc(r.product_code)}</code>${r.hardware_rev ? " • HW " + esc(r.hardware_rev) : ""}</td>
+        <td><span class="tag ${r.channel==="approved"?"ok":"beta"}">${esc(cap(r.channel))}</span></td>
+        <td><code>${esc(r.version)}</code></td>
+        <td><code>${isoUTC(r.released_at)}</code></td>
+        <td>${esc(r.notes||"")}</td>
+      </tr>
+    `).join("");
+  }
 
-    function esc(s){ return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',\"'\":'&#39;'}[m])); }
-    function isoUTC(s){ const d = new Date(s); return isNaN(d) ? "" : d.toISOString().replace(".000Z","Z"); }
-    function cap(s){ s=String(s||""); return s.charAt(0).toUpperCase()+s.slice(1); }
+  function esc(s){
+    return String(s||"").replace(/[&<>"']/g, m => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[m]));
+  }
+  function isoUTC(s){ const d = new Date(s); return isNaN(d) ? "" : d.toISOString().replace(".000Z","Z"); }
+  function cap(s){ s=String(s||""); return s.charAt(0).toUpperCase()+s.slice(1); }
 
-    qEl.addEventListener("input", e => { state.q = e.target.value; render(); });
-    betaEl.addEventListener("change", e => { state.showBeta = e.target.checked; render(); });
-    sortEl.addEventListener("change", e => { state.sortKey = e.target.value; render(); });
+  qEl.addEventListener("input", e => { state.q = e.target.value; render(); });
+  betaEl.addEventListener("change", e => { state.showBeta = e.target.checked; render(); });
+  sortEl.addEventListener("change", e => { state.sortKey = e.target.value; render(); });
 
-    fetch("versions.json?cb=" + Date.now(), { cache: "no-store" })
-      .then(r => { if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-      .then(json => { state.data = json; statusEl.textContent = "Last updated: " + new Date().toLocaleString(); render(); })
-      .catch(err => { statusEl.textContent = "Error loading versions.json: " + err.message; });
-  </script>
+  // Build a safe relative path and bust cache
+  const base = document.location.pathname.endsWith('/')
+    ? document.location.pathname
+    : document.location.pathname.replace(/[^/]+$/, '');
+  const url = base + 'versions.json?cb=' + Date.now();
+
+  fetch(url, { cache: "no-store" })
+    .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(json => { state.data = json; statusEl.textContent = "Last updated: " + new Date().toLocaleString(); render(); })
+    .catch(err => { statusEl.textContent = "Error loading versions.json: " + err.message; });
+</script>
+
 </body>
 </html>
