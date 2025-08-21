@@ -99,7 +99,7 @@
     betaEl.addEventListener("change", e => { state.showBeta = e.target.checked; render(); });
     sortEl.addEventListener("change", e => { state.sortKey = e.target.value; render(); });
 
-    fetch("versions.json", {cache:"no-store"})
+    fetch("versions.json?cb=" + Date.now(), { cache: "no-store" })
       .then(r => { if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
       .then(json => { state.data = json; statusEl.textContent = "Last updated: " + new Date().toLocaleString(); render(); })
       .catch(err => { statusEl.textContent = "Error loading versions.json: " + err.message; });
